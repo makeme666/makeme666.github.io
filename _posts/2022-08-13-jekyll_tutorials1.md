@@ -5,7 +5,7 @@ date: 2022-08-12
 tags: jekyll主题+ Github
 ---
 
-###Github创建jekyll网页
+### Github创建jekyll网页
       
       1、注册GitHub账户，选免费的项目即可，不懂英文的可网页翻译，账户名不能带中文，邮箱注册。
 
@@ -28,7 +28,7 @@ tags: jekyll主题+ Github
 
      如果要修改博客模板信息建议只修改`_config.yml` 文件内容，博客文章在`_posts` 。
 
-###安装Jekyll检验修改好的博客网站（有点复杂,经常报错）
+### 安装Jekyll检验修改好的博客网站（有点复杂,经常报错）
 
       参考Jekyll官网安装，报错按提示出入命令安装缺少的文件bundle add "提示缺的文件"
        
@@ -38,12 +38,12 @@ tags: jekyll主题+ Github
      
       点http://localhost:4000就可以看到网站效果
 
-###上传改好的网站
+### 上传改好的网站
     
       本地上传：GithubDesktop或者Git
 
 
-###Github加速登录可以说使用Steam++或者uu加速器
+### Github加速登录可以说使用Steam++或者uu加速器
 
     
 
