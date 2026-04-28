@@ -1,9 +1,0 @@
-# Cloudflare Pages 重定向配置
-# 格式: 源地址 目标地址 状态码
-
-/*
-  /index.html 200
-
-# 可选：启用 clean URLs（如果需要）
-/articles /articles.html 200
-/about /about.html 200

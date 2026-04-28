@@ -2,3 +2,8 @@
 .env
 .edgeone/*
 .tef_dist/*
+
+# Cloudflare Wrangler
+.wrangler/
+wrangler.toml
+wrangler.jsonc
