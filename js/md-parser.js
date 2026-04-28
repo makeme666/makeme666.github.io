@@ -183,9 +183,9 @@ function parseFrontmatter(md) {
 const PostLoader = {
   cache: null,
 
-  // 文章目录路径（始终使用 /posts/）
+  // 文章目录路径（使用相对路径，兼容 GitHub Pages 子目录部署）
   _getBasePath() {
-    return '/posts/';
+    return 'posts/';
   },
 
   async loadAllPosts() {
