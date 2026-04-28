@@ -183,7 +183,14 @@ function parseFrontmatter(md) {
 const PostLoader = {
   cache: null,
 
-  // 文章目录路径（使用相对路径，兼容 GitHub Pages 子目录部署）
+  // 诊断日志（仅在开发时启用）
+  _log(...args) {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      console.log('[PostLoader]', ...args);
+    }
+  },
+
+  // 文章目录路径（使用相对路径，兼容所有静态托管）
   _getBasePath() {
     return 'posts/';
   },
@@ -192,41 +199,80 @@ const PostLoader = {
     if (this.cache) return this.cache;
 
     const base = this._getBasePath();
-    
-    // 动态获取文章列表
-    let postsDir;
+    this._log('开始加载文章，基础路径:', base);
+
+    // 默认文章列表（确保至少有一个兜底）
+    let postsDir = [
+      '2026-04-18-glassmorphism.md',
+      '2026-04-10-why-i-write.md',
+      '2026-03-28-spring-afternoon.md',
+      '2026-03-15-css-design-tokens.md'
+    ];
+
+    // 尝试加载 manifest.json（提供更多文件列表）
     try {
       const res = await fetch(base + 'manifest.json');
       if (res.ok) {
-        const manifest = await res.json();
-        postsDir = manifest.posts || [];
+        const text = await res.text();
+        const manifest = JSON.parse(text);
+        if (manifest.posts && manifest.posts.length > 0) {
+          postsDir = manifest.posts;
+          this._log('使用 manifest.json:', postsDir);
+        }
+      } else {
+        this._log('manifest.json 加载失败, status:', res.status, '，使用默认列表');
       }
     } catch (e) {
-      // manifest.json 不存在时使用默认列表
-      postsDir = [
-        '2026-04-18-glassmorphism.md',
-        '2026-04-10-why-i-write.md',
-        '2026-03-28-spring-afternoon.md',
-        '2026-03-15-css-design-tokens.md'
-      ];
+      this._log('manifest.json 不存在或加载出错, 使用默认列表:', e.message);
     }
 
-    // 并行请求所有文章，大幅缩短加载时间
+    // 并行请求所有文章
+    this._log('开始并行加载', postsDir.length, '篇文章...');
     const results = await Promise.allSettled(
-      postsDir.map(file => fetch(base + file).then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.text().then(md => ({ file, ...parseFrontmatter(md) }));
-      }))
+      postsDir.map(file => this._loadPost(base, file))
     );
 
     const posts = results
       .filter(r => r.status === 'fulfilled')
       .map(r => r.value);
 
+    this._log('成功加载', posts.length, '篇文章');
+
     // 按日期降序排列
     posts.sort((a, b) => new Date(b.meta.date || 0) - new Date(a.meta.date || 0));
     this.cache = posts;
     return posts;
+  },
+
+  // 单独加载一篇文章，尝试多种编码
+  async _loadPost(base, file) {
+    // 尝试直接 fetch
+    let res = await fetch(base + file);
+    if (!res.ok) {
+      this._log('加载失败:', file, 'status:', res.status);
+      throw new Error(`HTTP ${res.status}`);
+    }
+    let md;
+    try {
+      md = await res.text();
+    } catch (e) {
+      // 尝试 blob 方式作为兜底
+      this._log('text() 失败，尝试 blob 方式:', file);
+      res = await fetch(base + file);
+      const blob = await res.blob();
+      md = await this._readBlobAsText(blob);
+    }
+    return { file, ...parseFrontmatter(md) };
+  },
+
+  // Blob 转文本的兜底方法
+  async _readBlobAsText(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsText(blob);
+    });
   },
 
   // 生成文章 URL（文章始终在 posts/ 目录，相对根目录）
