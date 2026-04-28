@@ -92,7 +92,7 @@
         本站内容仅代表个人观点，不构成任何投资建议或法律意见。<br>
         如内容侵犯您的权益，请通过 <a href="mailto:blog@example.com">blog@example.com</a> 联系我们，我们将在 3 个工作日内处理。
       </p>
-      <p style="margin-top:8px;font-size:11px;color:#c7c7cc;"><a href="#">隐私政策</a> · <a href="#">服务条款</a></p>
+      <p style="margin-top:8px;font-size:11px;color:#c7c7cc;"><a href="diagnostic.html" style="color:#aeaeb2;">🔧 诊断</a> · <a href="#">隐私政策</a> · <a href="#">服务条款</a></p>
     </div>
   </footer>
 
@@ -103,20 +103,37 @@
   <script src="js/md-parser.js" defer></script>
   <script src="js/main.js" defer></script>
   <script defer>
+    // 获取基础路径（兼容子目录部署）
+    function getBasePath() {
+      const params = new URLSearchParams(window.location.search);
+      const baseParam = params.get('base');
+      if (baseParam) return baseParam;
+      
+      // 从 URL 路径推断
+      const path = location.pathname;
+      const dirMatch = path.match(/^\/[^/]*\//);
+      if (dirMatch) return dirMatch[0] + 'posts/';
+      return 'posts/';
+    }
+
     document.addEventListener('DOMContentLoaded', async function renderArticle() {
       const params = new URLSearchParams(window.location.search);
       const postFile = params.get('post');
-      const basePath = 'posts/';
+      const basePath = getBasePath();
+      
       if (!postFile) {
         document.getElementById('articleBody').innerHTML = '<p style="text-align:center;padding:60px 0;color:#aeaeb2;">文章未找到</p>';
         return;
       }
+      
+      const fullPath = basePath + postFile;
+      
       try {
         // 诊断日志（仅本地开发可见）
         const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        if (isLocal) console.log('[Article] 尝试加载:', basePath + postFile);
+        if (isLocal) console.log('[Article] 尝试加载:', fullPath, '| base:', basePath);
 
-        const res = await fetch(basePath + postFile);
+        const res = await fetch(fullPath);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${postFile}`);
 
         let md;
@@ -124,7 +141,7 @@
           md = await res.text();
         } catch (e) {
           // blob 兜底
-          const res2 = await fetch(basePath + postFile);
+          const res2 = await fetch(fullPath);
           const blob = await res2.blob();
           md = await new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -152,6 +169,7 @@
             <h3 style="color:#333;margin-bottom:12px;">文章加载失败</h3>
             <p style="color:#aeaeb2;font-size:14px;margin-bottom:24px;">
               文件: ${escapeHtml(postFile)}<br/>
+              路径: ${escapeHtml(fullPath)}<br/>
               原因: ${escapeHtml(e.message)}<br/>
               请检查文章文件是否存在，或确认网络连接正常。
             </p>

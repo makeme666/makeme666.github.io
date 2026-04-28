@@ -190,16 +190,35 @@ const PostLoader = {
     }
   },
 
-  // 文章目录路径（使用相对路径，兼容所有静态托管）
+  // 获取站点基础路径（兼容各种部署环境）
   _getBasePath() {
-    return 'posts/';
+    const path = location.pathname;
+    // 提取目录部分，例如 /blog/ -> /blog/
+    const dirMatch = path.match(/^\/[^/]*\//);
+    return dirMatch ? dirMatch[0] : '/';
+  },
+
+  // 获取完整资源路径
+  _resolvePath(relative) {
+    const base = this._getBasePath();
+    // 确保 posts 目录路径正确
+    if (relative.startsWith('/')) {
+      return relative;
+    }
+    // 如果 base 是根路径，直接拼接
+    if (base === '/') {
+      return '/' + relative;
+    }
+    // 如果 base 不是根路径，确保正确拼接
+    return base + relative;
   },
 
   async loadAllPosts() {
     if (this.cache) return this.cache;
 
     const base = this._getBasePath();
-    this._log('开始加载文章，基础路径:', base);
+    const postsPath = this._resolvePath('posts/');
+    this._log('基础路径:', base, '| 文章目录:', postsPath);
 
     // 默认文章列表（确保至少有一个兜底）
     let postsDir = [
@@ -210,33 +229,40 @@ const PostLoader = {
     ];
 
     // 尝试加载 manifest.json（提供更多文件列表）
+    const manifestPath = postsPath + 'manifest.json';
+    this._log('尝试加载 manifest:', manifestPath);
+    
     try {
-      const res = await fetch(base + 'manifest.json');
+      const res = await fetch(manifestPath);
       if (res.ok) {
         const text = await res.text();
         const manifest = JSON.parse(text);
         if (manifest.posts && manifest.posts.length > 0) {
           postsDir = manifest.posts;
-          this._log('使用 manifest.json:', postsDir);
+          this._log('✓ manifest.json 加载成功:', postsDir.length, '篇文章');
         }
       } else {
-        this._log('manifest.json 加载失败, status:', res.status, '，使用默认列表');
+        this._log('✗ manifest.json 状态:', res.status);
       }
     } catch (e) {
-      this._log('manifest.json 不存在或加载出错, 使用默认列表:', e.message);
+      this._log('✗ manifest.json 加载失败:', e.message, '| 使用默认列表');
     }
 
     // 并行请求所有文章
     this._log('开始并行加载', postsDir.length, '篇文章...');
     const results = await Promise.allSettled(
-      postsDir.map(file => this._loadPost(base, file))
+      postsDir.map(file => this._loadPost(postsPath, file))
     );
 
     const posts = results
       .filter(r => r.status === 'fulfilled')
       .map(r => r.value);
 
-    this._log('成功加载', posts.length, '篇文章');
+    this._log('成功加载', posts.length, '/', postsDir.length, '篇文章');
+
+    if (posts.length === 0) {
+      this._log('警告: 未能加载任何文章！');
+    }
 
     // 按日期降序排列
     posts.sort((a, b) => new Date(b.meta.date || 0) - new Date(a.meta.date || 0));
@@ -245,11 +271,13 @@ const PostLoader = {
   },
 
   // 单独加载一篇文章，尝试多种编码
-  async _loadPost(base, file) {
+  async _loadPost(basePath, file) {
+    const filePath = basePath + file;
+    
     // 尝试直接 fetch
-    let res = await fetch(base + file);
+    let res = await fetch(filePath);
     if (!res.ok) {
-      this._log('加载失败:', file, 'status:', res.status);
+      this._log('✗ 加载失败:', file, 'status:', res.status, 'path:', filePath);
       throw new Error(`HTTP ${res.status}`);
     }
     let md;
@@ -258,10 +286,11 @@ const PostLoader = {
     } catch (e) {
       // 尝试 blob 方式作为兜底
       this._log('text() 失败，尝试 blob 方式:', file);
-      res = await fetch(base + file);
+      res = await fetch(filePath);
       const blob = await res.blob();
       md = await this._readBlobAsText(blob);
     }
+    this._log('✓ 加载成功:', file);
     return { file, ...parseFrontmatter(md) };
   },
 
@@ -275,9 +304,11 @@ const PostLoader = {
     });
   },
 
-  // 生成文章 URL（文章始终在 posts/ 目录，相对根目录）
+  // 生成文章 URL（兼容各种部署环境）
   getPostUrl(postFile) {
-    return `article.html?post=${encodeURIComponent(postFile)}&base=posts/`;
+    const base = this._getBasePath();
+    const basePath = base === '/' ? 'posts/' : base + 'posts/';
+    return `article.html?post=${encodeURIComponent(postFile)}&base=${encodeURIComponent(basePath)}`;
   },
 
   // 格式化日期

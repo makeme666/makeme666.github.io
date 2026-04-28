@@ -275,6 +275,35 @@ readtime: 5 分钟
 
 ---
 
+## 🔧 故障排查
+
+如果文章无法显示，请访问 `diagnostic.html` 进行诊断：
+
+```bash
+# 本地访问
+http://localhost:3030/diagnostic.html
+
+# 部署后访问
+https://你的域名.com/diagnostic.html
+```
+
+诊断工具会检测：
+- 环境信息（域名、路径）
+- CSS/JS 文件可访问性
+- manifest.json 是否正常
+- 文章文件是否正常加载
+
+### 常见问题
+
+| 问题 | 解决方案 |
+|------|----------|
+| manifest.json 404 | 确保 `.nojekyll` 文件存在（GitHub Pages） |
+| .md 文件 404 | 检查 posts/ 目录是否正确上传 |
+| 自定义域名问题 | Cloudflare 尝试 DNS Only 模式 |
+| 跨域问题 | 使用默认域名测试是否正常 |
+
+---
+
 ## 📜 License
 
 MIT License - 可自由使用、修改和部署。

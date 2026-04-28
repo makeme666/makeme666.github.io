@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>博客诊断 · 我的博客</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", Arial, sans-serif; background: #f5f5f7; color: #1d1d1f; line-height: 1.6; padding: 40px 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 24px; color: #1a3a5c; }
+    .card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 16px; color: #333; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .item:last-child { border-bottom: none; }
+    .label { color: #666; font-size: 14px; }
+    .value { font-weight: 500; font-size: 14px; font-family: monospace; }
+    .success { color: #34c759; }
+    .error { color: #ff3b30; }
+    .warning { color: #ff9500; }
+    .test-btn { display: inline-block; padding: 10px 20px; background: #0071e3; color: white; border-radius: 20px; cursor: pointer; margin: 8px 4px; font-size: 14px; border: none; }
+    .test-btn:hover { background: #005bb5; }
+    #testResults { margin-top: 20px; }
+    .test-result { padding: 12px 16px; margin: 8px 0; border-radius: 8px; background: #f8f8f8; }
+    .test-result.success { background: #e8f5e9; border-left: 4px solid #34c759; }
+    .test-result.error { background: #ffebee; border-left: 4px solid #ff3b30; }
+    .tip { background: #fff9e6; border: 1px solid #ffeaa7; border-radius: 8px; padding: 16px; margin-top: 16px; }
+    .tip h3 { font-size: 14px; color: #856404; margin-bottom: 8px; }
+    .tip ul { margin-left: 20px; font-size: 14px; color: #856404; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 博客诊断工具</h1>
+    
+    <div class="card">
+      <h2>📋 环境信息</h2>
+      <div class="item"><span class="label">当前 URL</span><span class="value" id="url"></span></div>
+      <div class="item"><span class="label">域名</span><span class="value" id="hostname"></span></div>
+      <div class="item"><span class="label">路径</span><span class="value" id="pathname"></span></div>
+      <div class="item"><span class="label">推断的子目录</span><span class="value" id="subdir"></span></div>
+    </div>
+
+    <div class="card">
+      <h2>🧪 文件可访问性测试</h2>
+      <button class="test-btn" onclick="testFiles()">开始测试</button>
+      <div id="testResults"></div>
+    </div>
+
+    <div class="tip">
+      <h3>💡 常见问题解决</h3>
+      <ul>
+        <li><strong>manifest.json 404:</strong> 确保 posts/manifest.json 存在且被 GitHub Pages 正确服务（需要 .nojekyll 文件）</li>
+        <li><strong>.md 文件 404:</strong> 确保 posts/*.md 文件存在，GitHub Pages 默认会服务 .md 文件</li>
+        <li><strong>自定义域名问题:</strong> 检查 Cloudflare DNS 设置，确保 CNAME 记录正确且未启用 Proxy（尝试 DNS Only）</li>
+        <li><strong>跨域问题:</strong> GitHub Pages 不支持自定义域名下的 CORS，如有问题请使用默认域名测试</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // 显示环境信息
+    document.getElementById('url').textContent = location.href;
+    document.getElementById('hostname').textContent = location.hostname;
+    document.getElementById('pathname').textContent = location.pathname;
+    
+    const path = location.pathname;
+    const dirMatch = path.match(/^\/[^/]*\//);
+    const subdir = dirMatch ? dirMatch[0] : '/';
+    document.getElementById('subdir').textContent = subdir === '/' ? '根目录部署' : subdir;
+    document.getElementById('subdir').className = subdir === '/' ? 'value success' : 'value warning';
+
+    // 文件测试
+    async function testFiles() {
+      const results = document.getElementById('testResults');
+      results.innerHTML = '<p style="color:#666;">测试中...</p>';
+      
+      const base = subdir;
+      const postsBase = base === '/' ? 'posts/' : base + 'posts/';
+      
+      const files = [
+        { path: 'css/style.css', name: '样式文件' },
+        { path: 'js/md-parser.js', name: '解析器' },
+        { path: 'js/main.js', name: '主脚本' },
+        { path: postsBase + 'manifest.json', name: '文章索引' },
+        { path: postsBase + '2026-04-18-glassmorphism.md', name: '示例文章' },
+        { path: 'images/avatar.png', name: '头像图片' }
+      ];
+
+      let html = '';
+      for (const file of files) {
+        try {
+          const res = await fetch(file.path, { method: 'HEAD' });
+          if (res.ok) {
+            html += `<div class="test-result success">
+              <strong>✓ ${file.name}</strong> (${file.path}) - HTTP ${res.status}
+            </div>`;
+          } else {
+            html += `<div class="test-result error">
+              <strong>✗ ${file.name}</strong> (${file.path}) - HTTP ${res.status}
+            </div>`;
+          }
+        } catch (e) {
+          html += `<div class="test-result error">
+            <strong>✗ ${file.name}</strong> (${file.path}) - ${e.message}
+          </div>`;
+        }
+        results.innerHTML = html;
+      }
+
+      // 测试文章加载
+      try {
+        results.innerHTML += '<p style="margin-top:16px;color:#666;">正在测试文章加载...</p>';
+        const res = await fetch(postsBase + 'manifest.json');
+        const data = await res.json();
+        results.innerHTML += `<p style="color:#34c759;">✓ manifest.json 解析成功，共 ${data.posts.length} 篇文章</p>`;
+        
+        // 测试加载第一篇文章
+        if (data.posts.length > 0) {
+          const postRes = await fetch(postsBase + data.posts[0]);
+          const postText = await postRes.text();
+          const hasContent = postText.includes('---') && postText.includes('title:');
+          results.innerHTML += hasContent 
+            ? `<p style="color:#34c759;">✓ 文章 "${data.posts[0]}" 加载成功</p>`
+            : `<p style="color:#ff9500;">⚠ 文章内容格式可能有问题</p>`;
+        }
+      } catch (e) {
+        results.innerHTML += `<p style="color:#ff3b30;">✗ 文章加载失败: ${e.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
