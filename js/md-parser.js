@@ -25,16 +25,16 @@ function parseMarkdown(md) {
 
   // 3. 按行处理
   const lines = html.split('\n');
-  let result = [];
-  let inList = false;
-  let inOrderedList = false;
-  let inBlockquote = false;
+  var result = [];
+  var inList = false;
+  var inOrderedList = false;
+  var inBlockquote = false;
 
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
 
     // 代码块占位符
-    if (line.includes('%%CODEBLOCK_')) {
+    if (line.indexOf('%%CODEBLOCK_') !== -1) {
       closeLists();
       closeBlockquote();
       result.push(line);
@@ -49,57 +49,57 @@ function parseMarkdown(md) {
     }
 
     // 标题
-    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    var headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
       closeLists();
       closeBlockquote();
-      const level = headingMatch[1].length;
-      const text = inlineFormat(headingMatch[2]);
-      result.push(`<h${level}>${text}</h${level}>`);
+      var level = headingMatch[1].length;
+      var text = inlineFormat(headingMatch[2]);
+      result.push('<h' + level + '>' + text + '</h' + level + '>');
       continue;
     }
 
     // 引用块
-    if (line.startsWith('> ')) {
+    if (line.indexOf('> ') === 0) {
       closeLists();
       if (!inBlockquote) {
         inBlockquote = true;
         result.push('<blockquote>');
       }
-      result.push(`<p>${inlineFormat(line.slice(2))}</p>`);
+      result.push('<p>' + inlineFormat(line.slice(2)) + '</p>');
       continue;
     } else if (inBlockquote) {
       closeBlockquote();
     }
 
     // 有序列表
-    const olMatch = line.match(/^\d+\.\s+(.+)$/);
+    var olMatch = line.match(/^\d+\.\s+(.+)$/);
     if (olMatch) {
       closeBlockquote();
       if (!inOrderedList) {
         inOrderedList = true;
         result.push('<ol>');
       }
-      result.push(`<li>${inlineFormat(olMatch[1])}</li>`);
+      result.push('<li>' + inlineFormat(olMatch[1]) + '</li>');
       continue;
     }
 
     // 无序列表
-    const ulMatch = line.match(/^[-*+]\s+(.+)$/);
+    var ulMatch = line.match(/^[-*+]\s+(.+)$/);
     if (ulMatch) {
       closeBlockquote();
       if (!inList) {
         inList = true;
         result.push('<ul>');
       }
-      result.push(`<li>${inlineFormat(ulMatch[1])}</li>`);
+      result.push('<li>' + inlineFormat(ulMatch[1]) + '</li>');
       continue;
     }
 
     // 普通段落
     closeLists();
     closeBlockquote();
-    result.push(`<p>${inlineFormat(line)}</p>`);
+    result.push('<p>' + inlineFormat(line) + '</p>');
   }
 
   closeLists();
@@ -108,11 +108,11 @@ function parseMarkdown(md) {
   html = result.join('\n');
 
   // 恢复代码块
-  codeBlocks.forEach((block, idx) => {
-    html = html.replace(`%%CODEBLOCK_${idx}%%`, block);
+  codeBlocks.forEach(function(block, idx) {
+    html = html.replace('%%CODEBLOCK_' + idx + '%%', block);
   });
-  inlineCodes.forEach((code, idx) => {
-    html = html.replace(`%%INLINE_${idx}%%`, code);
+  inlineCodes.forEach(function(code, idx) {
+    html = html.replace('%%INLINE_' + idx + '%%', code);
   });
 
   function closeLists() {
@@ -128,14 +128,14 @@ function parseMarkdown(md) {
 
 function inlineFormat(text) {
   // 图片 ![alt](src) - XSS 防护
-  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, src) => {
-    const safeSrc = validateUrl(src) ? src : '';
-    return `<img src="${safeSrc}" alt="${escapeHtml(alt)}" style="max-width:100%;border-radius:12px;margin:16px 0;" />`;
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(m, alt, src) {
+    var safeSrc = validateUrl(src) ? src : '';
+    return '<img src="' + safeSrc + '" alt="' + escapeHtml(alt) + '" style="max-width:100%;border-radius:12px;margin:16px 0;" />';
   });
   // 链接 [text](href) - XSS 防护
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, label, href) => {
-    const safeHref = validateUrl(href) ? href : '#';
-    return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#0071e3;text-decoration:underline;">${escapeHtml(label)}</a>`;
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(m, label, href) {
+    var safeHref = validateUrl(href) ? href : '#';
+    return '<a href="' + safeHref + '" target="_blank" rel="noopener noreferrer" style="color:#0071e3;text-decoration:underline;">' + escapeHtml(label) + '</a>';
   });
   // 加粗 **text**
   text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -149,8 +149,7 @@ function inlineFormat(text) {
 // URL 安全验证 - 防止 XSS
 function validateUrl(url) {
   if (!url) return false;
-  // 允许绝对 URL (http/https) 和相对路径 (/)
-  return /^https?:\/\//i.test(url) || url.startsWith('/') || url.startsWith('#');
+  return /^https?:\/\//i.test(url) || url.charAt(0) === '/' || url.charAt(0) === '#';
 }
 
 function escapeHtml(str) {
@@ -160,187 +159,211 @@ function escapeHtml(str) {
 // ===================== Frontmatter 解析 =====================
 
 function parseFrontmatter(md) {
-  // 统一处理 CRLF 和 LF 换行符
-  const normalizedMd = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const match = normalizedMd.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  // 统一处理 CRLF 和 LF 换行符（兼容 Windows）
+  var normalizedMd = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var match = normalizedMd.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!match) return { meta: {}, content: normalizedMd };
 
-  const meta = {};
-  match[1].split('\n').forEach(line => {
-    const colonIdx = line.indexOf(':');
+  var meta = {};
+  match[1].split('\n').forEach(function(line) {
+    var colonIdx = line.indexOf(':');
     if (colonIdx > 0) {
-      const key = line.slice(0, colonIdx).trim();
-      const val = line.slice(colonIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+      var key = line.slice(0, colonIdx).trim();
+      var val = line.slice(colonIdx + 1).trim().replace(/^['"]|['"]$/g, '');
       meta[key] = val;
     }
   });
 
-  return { meta, content: match[2] };
+  return { meta: meta, content: match[2] };
+}
+
+// ===================== 兼容性补丁 =====================
+
+// Promise.allSettled polyfill（兼容 iOS 12 / Android 旧版）
+if (typeof Promise !== 'undefined' && !Promise.allSettled) {
+  Promise.allSettled = function(promises) {
+    return Promise.all(
+      promises.map(function(p) {
+        return Promise.resolve(p).then(
+          function(value) { return { status: 'fulfilled', value: value }; },
+          function(reason) { return { status: 'rejected', reason: reason }; }
+        );
+      })
+    );
+  };
+}
+
+// fetch with timeout（防止手机网络超时无响应）
+function fetchWithTimeout(url, timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
+  return new Promise(function(resolve, reject) {
+    var timer = setTimeout(function() {
+      reject(new Error('fetch timeout: ' + url));
+    }, timeoutMs);
+
+    fetch(url).then(function(res) {
+      clearTimeout(timer);
+      resolve(res);
+    }).catch(function(err) {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
 }
 
 // ===================== 文章加载器 =====================
 
-const PostLoader = {
+var PostLoader = {
   cache: null,
 
-  // 诊断日志（仅在开发时启用）
-  _log(...args) {
+  // 诊断日志
+  _log: function() {
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      console.log('[PostLoader]', ...args);
+      var args = Array.prototype.slice.call(arguments);
+      args.unshift('[PostLoader]');
+      console.log.apply(console, args);
     }
   },
 
   // 获取站点基础路径（兼容各种部署环境）
-  _getBasePath() {
-    const path = location.pathname;
-    // 提取目录部分，例如 /blog/ -> /blog/
-    const dirMatch = path.match(/^\/[^/]*\//);
-    return dirMatch ? dirMatch[0] : '/';
+  // - 根域名部署: https://newline.ccwu.cc/  → '/'
+  // - 子路径部署: https://xxx.github.io/blog/ → '/blog/'
+  _getBasePath: function() {
+    var path = location.pathname;
+    // 去掉末尾的文件名，只保留目录
+    var dir = path.substring(0, path.lastIndexOf('/') + 1);
+    // 如果目录是根，返回 /
+    if (!dir || dir === '/') return '/';
+    return dir;
   },
 
   // 获取完整资源路径
-  _resolvePath(relative) {
-    const base = this._getBasePath();
-    // 确保 posts 目录路径正确
-    if (relative.startsWith('/')) {
-      return relative;
-    }
-    // 如果 base 是根路径，直接拼接
-    if (base === '/') {
-      return '/' + relative;
-    }
-    // 如果 base 不是根路径，确保正确拼接
+  _resolvePath: function(relative) {
+    if (relative.charAt(0) === '/') return relative;
+    var base = this._getBasePath();
     return base + relative;
   },
 
-  async loadAllPosts() {
-    if (this.cache) return this.cache;
+  loadAllPosts: function() {
+    var self = this;
+    if (self.cache) return Promise.resolve(self.cache);
 
-    const base = this._getBasePath();
-    const postsPath = this._resolvePath('posts/');
-    this._log('基础路径:', base, '| 文章目录:', postsPath);
+    var postsPath = self._resolvePath('posts/');
+    self._log('文章目录:', postsPath);
 
-    // 默认文章列表（确保至少有一个兜底）
-    let postsDir = [
+    // 默认文章列表（兜底）
+    var defaultPostsList = [
       '2026-04-18-glassmorphism.md',
       '2026-04-10-why-i-write.md',
       '2026-03-28-spring-afternoon.md',
       '2026-03-15-css-design-tokens.md'
     ];
 
-    // 尝试加载 manifest.json（提供更多文件列表）
-    const manifestPath = postsPath + 'manifest.json';
-    this._log('尝试加载 manifest:', manifestPath);
-    
-    try {
-      const res = await fetch(manifestPath);
-      if (res.ok) {
-        const text = await res.text();
-        const manifest = JSON.parse(text);
+    var manifestPath = postsPath + 'manifest.json';
+    self._log('尝试加载 manifest:', manifestPath);
+
+    return fetchWithTimeout(manifestPath, 6000)
+      .then(function(res) {
+        if (!res.ok) throw new Error('manifest HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function(text) {
+        var manifest = JSON.parse(text);
         if (manifest.posts && manifest.posts.length > 0) {
-          postsDir = manifest.posts;
-          this._log('✓ manifest.json 加载成功:', postsDir.length, '篇文章');
+          self._log('✓ manifest 加载成功:', manifest.posts.length, '篇');
+          return manifest.posts;
         }
-      } else {
-        this._log('✗ manifest.json 状态:', res.status);
-      }
-    } catch (e) {
-      this._log('✗ manifest.json 加载失败:', e.message, '| 使用默认列表');
-    }
-
-    // 并行请求所有文章
-    this._log('开始并行加载', postsDir.length, '篇文章...');
-    const results = await Promise.allSettled(
-      postsDir.map(file => this._loadPost(postsPath, file))
-    );
-
-    const posts = results
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value);
-
-    this._log('成功加载', posts.length, '/', postsDir.length, '篇文章');
-
-    if (posts.length === 0) {
-      this._log('警告: 未能加载任何文章！');
-    }
-
-    // 按日期降序排列
-    posts.sort((a, b) => new Date(b.meta.date || 0) - new Date(a.meta.date || 0));
-    this.cache = posts;
-    return posts;
+        return defaultPostsList;
+      })
+      .catch(function(e) {
+        self._log('✗ manifest 失败:', e.message, '| 使用默认列表');
+        return defaultPostsList;
+      })
+      .then(function(postsDir) {
+        // 并行加载所有文章
+        self._log('并行加载', postsDir.length, '篇文章...');
+        var loadTasks = postsDir.map(function(file) {
+          return self._loadPost(postsPath, file);
+        });
+        return Promise.allSettled(loadTasks);
+      })
+      .then(function(results) {
+        var posts = [];
+        results.forEach(function(r) {
+          if (r.status === 'fulfilled') posts.push(r.value);
+        });
+        self._log('成功加载', posts.length, '篇文章');
+        if (posts.length === 0) self._log('警告: 未能加载任何文章！');
+        // 按日期降序排列
+        posts.sort(function(a, b) {
+          return new Date(b.meta.date || 0) - new Date(a.meta.date || 0);
+        });
+        self.cache = posts;
+        return posts;
+      });
   },
 
-  // 单独加载一篇文章，尝试多种编码
-  async _loadPost(basePath, file) {
-    const filePath = basePath + file;
-    
-    // 尝试直接 fetch
-    let res = await fetch(filePath);
-    if (!res.ok) {
-      this._log('✗ 加载失败:', file, 'status:', res.status, 'path:', filePath);
-      throw new Error(`HTTP ${res.status}`);
-    }
-    let md;
-    try {
-      md = await res.text();
-    } catch (e) {
-      // 尝试 blob 方式作为兜底
-      this._log('text() 失败，尝试 blob 方式:', file);
-      res = await fetch(filePath);
-      const blob = await res.blob();
-      md = await this._readBlobAsText(blob);
-    }
-    this._log('✓ 加载成功:', file);
-    return { file, ...parseFrontmatter(md) };
+  // 单独加载一篇文章
+  _loadPost: function(basePath, file) {
+    var self = this;
+    var filePath = basePath + file;
+
+    return fetchWithTimeout(filePath, 8000)
+      .then(function(res) {
+        if (!res.ok) {
+          self._log('✗ 加载失败:', file, 'status:', res.status);
+          throw new Error('HTTP ' + res.status);
+        }
+        return res.text();
+      })
+      .then(function(md) {
+        self._log('✓ 加载成功:', file);
+        var parsed = parseFrontmatter(md);
+        return { file: file, meta: parsed.meta, content: parsed.content };
+      });
   },
 
-  // Blob 转文本的兜底方法
-  async _readBlobAsText(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsText(blob);
-    });
-  },
-
-  // 生成文章 URL（兼容各种部署环境）
-  getPostUrl(postFile) {
-    const base = this._getBasePath();
-    const basePath = base === '/' ? 'posts/' : base + 'posts/';
-    return `article.html?post=${encodeURIComponent(postFile)}&base=${encodeURIComponent(basePath)}`;
+  // 生成文章 URL
+  getPostUrl: function(postFile) {
+    var base = this._getBasePath();
+    var basePath = base === '/' ? 'posts/' : base + 'posts/';
+    return 'article.html?post=' + encodeURIComponent(postFile) + '&base=' + encodeURIComponent(basePath);
   },
 
   // 格式化日期
-  formatDate(dateStr) {
-    // 使用明确的时间戳格式避免时区问题
-    const d = new Date(dateStr + 'T00:00:00');
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}年${parseInt(m)}月${parseInt(day)}日`;
+  formatDate: function(dateStr) {
+    if (!dateStr) return '';
+    // 加上时间避免时区问题导致日期偏一天
+    var d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return dateStr;
+    var y = d.getFullYear();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return y + '年' + m + '月' + day + '日';
   },
 
-  formatDateShort(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00');
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${parseInt(m)}月${parseInt(day)}日`;
+  formatDateShort: function(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return dateStr;
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return m + '月' + day + '日';
   },
 
   // 提取摘要（取前 120 字，清理 Markdown 格式）
-  excerpt(content, len = 120) {
+  excerpt: function(content, len) {
+    len = len || 120;
     if (!content) return '...';
-    // 移除 frontmatter 后处理，先移除标题和链接等格式
-    const cleaned = content
-      .replace(/^#{1,6}\s+.+$/gm, '')           // 移除标题行
-      .replace(/```[\s\S]*?```/g, '')           // 移除代码块
-      .replace(/`[^`]+`/g, '')                  // 移除行内代码
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')   // 链接转文字
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')    // 移除图片
-      .replace(/[*_~`#>]/g, '')                 // 移除 Markdown 符号
-      .replace(/\n+/g, ' ')                     // 换行转空格
-      .replace(/\s+/g, ' ')                     // 多个空格合并
+    var cleaned = content
+      .replace(/^#{1,6}\s+.+$/gm, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`[^`]+`/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
+      .replace(/[*_~`#>]/g, '')
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
     return cleaned.slice(0, len) + (cleaned.length > len ? '...' : '');
   }

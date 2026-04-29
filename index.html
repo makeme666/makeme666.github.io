@@ -102,112 +102,127 @@
   <script src="js/main.js" defer></script>
   <!-- 英雄区日期 + 时钟 -->
   <script defer>
-  'use strict';
   document.addEventListener('DOMContentLoaded', function() {
-  initHeroQuote();
+  // initHeroQuote 已由 main.js DOMContentLoaded 调用，此处不再重复
   (function initHeroClock() {
-    const tiangan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-    const dizhi   = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-    const shuxiang= ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+    var tiangan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    var dizhi   = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    var shuxiang= ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
     function getGanzhi(year) {
-      const offset = year - 1984;
-      const tg = ((offset % 10) + 10) % 10;
-      const dz = ((offset % 12) + 12) % 12;
+      var offset = year - 1984;
+      var tg = ((offset % 10) + 10) % 10;
+      var dz = ((offset % 12) + 12) % 12;
       return tiangan[tg] + dizhi[dz] + shuxiang[dz] + '年';
     }
 
-    const dateEl = document.getElementById('heroDate');
-    const timeEl = document.getElementById('heroTime');
+    // 获取北京时间（兼容各平台，不依赖 toLocaleString 时区）
+    function getBeijingDate() {
+      var utc = Date.now() + (new Date().getTimezoneOffset() * 60000);
+      return new Date(utc + 8 * 3600000);
+    }
+
+    var dateEl = document.getElementById('heroDate');
+    var timeEl = document.getElementById('heroTime');
     if (!dateEl || !timeEl) return;
 
     // 创建时间数字元素（只创建一次）
-    timeEl.innerHTML = `
-      <span class="time-digits" id="timeH"></span>
-      <span class="time-colon">:</span>
-      <span class="time-digits" id="timeM"></span>
-      <span class="time-colon">:</span>
-      <span class="time-digits" id="timeS"></span>
-    `;
-    const elH = document.getElementById('timeH');
-    const elM = document.getElementById('timeM');
-    const elS = document.getElementById('timeS');
+    timeEl.innerHTML =
+      '<span class="time-digits" id="timeH"></span>' +
+      '<span class="time-colon">:</span>' +
+      '<span class="time-digits" id="timeM"></span>' +
+      '<span class="time-colon">:</span>' +
+      '<span class="time-digits" id="timeS"></span>';
 
-    let lastDay = -1;
-    let lastH = '', lastM = '', lastS = '';
+    var elH = document.getElementById('timeH');
+    var elM = document.getElementById('timeM');
+    var elS = document.getElementById('timeS');
 
-    function pad2(n) { return String(n).padStart(2,'0'); }
+    var lastDay = -1;
+    var lastH = '', lastM = '', lastS = '';
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
     function updateClock() {
-      const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Asia/Shanghai'}));
-      const sec = now.getSeconds();
-      const min = now.getMinutes();
-      const day = now.getDate();
-      const h = pad2(now.getHours());
-      const m = pad2(min);
-      const s = pad2(sec);
+      var now = getBeijingDate();
+      var day = now.getDate();
+      var h = pad2(now.getHours());
+      var m = pad2(now.getMinutes());
+      var s = pad2(now.getSeconds());
 
-      // 仅更新变化的数字
       if (h !== lastH) { elH.textContent = h; lastH = h; }
       if (m !== lastM) { elM.textContent = m; lastM = m; }
       if (s !== lastS) { elS.textContent = s; lastS = s; }
 
-      // 日期每天更新一次
       if (day !== lastDay) {
         lastDay = day;
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-        dateEl.textContent = `${year}年${month}月${day}日 · ${getGanzhi(year)}`;
+        var year = now.getFullYear();
+        var month = now.getMonth() + 1;
+        dateEl.textContent = year + '年' + month + '月' + day + '日 · ' + getGanzhi(year);
       }
     }
 
     // 首次渲染
-    const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Shanghai'}));
-    const year = now.getFullYear(), month = now.getMonth() + 1, day = now.getDate();
-    const h = pad2(now.getHours()), m = pad2(now.getMinutes()), s = pad2(now.getSeconds());
-    dateEl.textContent = `${year}年${month}月${day}日 · ${getGanzhi(year)}`;
-    elH.textContent = h; elM.textContent = m; elS.textContent = s;
-    lastH = h; lastM = m; lastS = s;
-    lastDay = day;
+    var now0 = getBeijingDate();
+    var yr = now0.getFullYear(), mo = now0.getMonth() + 1, dy = now0.getDate();
+    var hh = pad2(now0.getHours()), mm = pad2(now0.getMinutes()), ss = pad2(now0.getSeconds());
+    dateEl.textContent = yr + '年' + mo + '月' + dy + '日 · ' + getGanzhi(yr);
+    elH.textContent = hh; elM.textContent = mm; elS.textContent = ss;
+    lastH = hh; lastM = mm; lastS = ss;
+    lastDay = dy;
 
     setInterval(updateClock, 1000);
   })();
 
-  (async function initHomePage() {
-    const list = document.getElementById('articleList');
-    list.innerHTML = `
-      <div class="article-card">
-        <div class="skeleton" style="width:40%;height:14px;margin-bottom:16px;"></div>
-        <div class="skeleton" style="width:80%;height:22px;margin-bottom:10px;"></div>
-        <div class="skeleton" style="width:100%;height:14px;margin-bottom:6px;"></div>
-        <div class="skeleton" style="width:90%;height:14px;margin-bottom:6px;"></div>
-      </div>
-      <div class="article-card">
-        <div class="skeleton" style="width:40%;height:14px;margin-bottom:16px;"></div>
-        <div class="skeleton" style="width:70%;height:22px;margin-bottom:10px;"></div>
-        <div class="skeleton" style="width:100%;height:14px;margin-bottom:6px;"></div>
-        <div class="skeleton" style="width:85%;height:14px;margin-bottom:6px;"></div>
-      </div>`;
-    try {
-      if (typeof PostLoader === 'undefined') throw new Error('PostLoader 未加载');
-      const posts = await PostLoader.loadAllPosts();
-      if (!posts.length) { list.innerHTML='<p style="text-align:center;color:#aeaeb2;padding:60px 0;">暂无文章</p>'; return; }
-      list.innerHTML = posts.map(post => `
-        <a href="${PostLoader.getPostUrl(post.file)}" class="article-card" data-tag="${post.meta.tag||''}">
-          <div class="article-card-meta">
-            <span class="article-date">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2H5a3 3 0 00-3 3v6a3 3 0 003 3h6a3 3 0 003-3V5a3 3 0 00-3-3z" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v3M8 5.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              ${PostLoader.formatDate(post.meta.date||'')}
-            </span>
-            <span class="article-tag">${post.meta.tag||'未分类'}</span>
-          </div>
-          <h3 class="article-title">${post.meta.title||'无标题'}</h3>
-          <p class="article-excerpt">${PostLoader.excerpt(post.content)}</p>
-          <span class="article-read-more">阅读全文 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        </a>`).join('');
-      if (typeof initCardAnimation === 'function') initCardAnimation();
-    } catch(e) {
-      list.innerHTML='<p style="text-align:center;color:#aeaeb2;padding:60px 0;">文章加载失败，请确保服务器已启动</p>';
+  (function initHomePage() {
+    var list = document.getElementById('articleList');
+    if (!list) return;
+
+    // 显示骨架屏占位
+    list.innerHTML = [
+      '<div class="article-card">',
+        '<div class="skeleton" style="width:40%;height:14px;margin-bottom:16px;"></div>',
+        '<div class="skeleton" style="width:80%;height:22px;margin-bottom:10px;"></div>',
+        '<div class="skeleton" style="width:100%;height:14px;margin-bottom:6px;"></div>',
+        '<div class="skeleton" style="width:90%;height:14px;margin-bottom:6px;"></div>',
+      '</div>',
+      '<div class="article-card">',
+        '<div class="skeleton" style="width:40%;height:14px;margin-bottom:16px;"></div>',
+        '<div class="skeleton" style="width:70%;height:22px;margin-bottom:10px;"></div>',
+        '<div class="skeleton" style="width:100%;height:14px;margin-bottom:6px;"></div>',
+        '<div class="skeleton" style="width:85%;height:14px;margin-bottom:6px;"></div>',
+      '</div>'
+    ].join('');
+
+    if (typeof PostLoader === 'undefined') {
+      list.innerHTML = '<p style="text-align:center;color:#aeaeb2;padding:60px 0;">脚本未加载，请刷新页面</p>';
+      return;
     }
+
+    PostLoader.loadAllPosts().then(function(posts) {
+      if (!posts || posts.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:#aeaeb2;padding:60px 0;">暂无文章</p>';
+        return;
+      }
+      var html = posts.map(function(post) {
+        return '<a href="' + PostLoader.getPostUrl(post.file) + '" class="article-card" data-tag="' + (post.meta.tag || '') + '">'
+          + '<div class="article-card-meta">'
+            + '<span class="article-date">'
+              + '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2H5a3 3 0 00-3 3v6a3 3 0 003 3h6a3 3 0 003-3V5a3 3 0 00-3-3z" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v3M8 5.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+              + PostLoader.formatDate(post.meta.date || '')
+            + '</span>'
+            + '<span class="article-tag">' + (post.meta.tag || '未分类') + '</span>'
+          + '</div>'
+          + '<h3 class="article-title">' + (post.meta.title || '无标题') + '</h3>'
+          + '<p class="article-excerpt">' + PostLoader.excerpt(post.content) + '</p>'
+          + '<span class="article-read-more">阅读全文 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+          + '</a>';
+      }).join('');
+      list.innerHTML = html;
+      if (typeof initCardAnimation === 'function') initCardAnimation();
+    }).catch(function(e) {
+      console.error('文章加载错误:', e);
+      list.innerHTML = '<p style="text-align:center;color:#aeaeb2;padding:60px 0;">文章加载失败，请刷新页面重试</p>';
+    });
   })();
   });
   </script>
