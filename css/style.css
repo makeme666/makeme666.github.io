@@ -309,7 +309,7 @@ footer { background: rgba(255, 255, 255, 0.6); backdrop-filter: saturate(180%) b
   .article-card { padding: 20px 22px; }
   .navbar { padding: 0 16px; }
   .hero { padding: calc(var(--nav-height) + 40px) 16px 60px; }
-  .quote-text { font-size: 18px !important; }
+  .quote-text { font-size: 16px; }
   .search-container { padding: 20px; }
 }
 @media (max-width: 480px) {

@@ -80,9 +80,9 @@ function initCardAnimation() {
 }
 
 // ===================== 励志名言滚动 =====================
-const HeroQuotes = [
+var HeroQuotes = [
   { text: '保持饥饿，保持愚蠢', author: '史蒂夫·乔布斯' },
-  { text: '做你害怕做的事，然后恐惧就会消失', author: '爱默生' },
+  { text: '做你害怕做的事，恐惧就会消失', author: '爱默生' },
   { text: '优秀不是一种行为，而是一种习惯', author: '亚里士多德' },
   { text: '千里之行，始于足下', author: '老子' },
   { text: '学而不思则罔', author: '孔子' },
@@ -91,45 +91,56 @@ const HeroQuotes = [
   { text: '凡是过往，皆为序章', author: '莎士比亚' },
 ];
 
-let currentQuoteIndex = 0;
-let quoteTimer = null;
+var currentQuoteIndex = 0;
+// 挂到 window 防止移动端块级作用域问题
+window._quoteTimer = null;
+
+function showQuote(index) {
+  var textEl = document.getElementById('quoteText');
+  var authorEl = document.getElementById('quoteAuthor');
+  if (!textEl || !authorEl || !HeroQuotes || !HeroQuotes.length) return;
+  var quote = HeroQuotes[index % HeroQuotes.length];
+  textEl.style.opacity = '0';
+  textEl.style.transform = 'translateY(-10px)';
+  authorEl.style.opacity = '0';
+  authorEl.style.transform = 'translateY(-10px)';
+  setTimeout(function() {
+    textEl.textContent = quote.text;
+    authorEl.textContent = '\u2014\u2014 ' + quote.author;
+    textEl.style.opacity = '1';
+    textEl.style.transform = 'translateY(0)';
+    authorEl.style.opacity = '1';
+    authorEl.style.transform = 'translateY(0)';
+  }, 300);
+}
+
+function nextQuote() {
+  currentQuoteIndex = (currentQuoteIndex + 1) % HeroQuotes.length;
+  showQuote(currentQuoteIndex);
+}
 
 function initHeroQuote() {
-  const wrap = document.getElementById('heroQuoteWrap');
+  var wrap = document.getElementById('heroQuoteWrap');
   if (!wrap) return;
-  
-  const textEl = document.getElementById('quoteText');
-  const authorEl = document.getElementById('quoteAuthor');
+  var textEl = document.getElementById('quoteText');
+  var authorEl = document.getElementById('quoteAuthor');
   if (!textEl || !authorEl) return;
 
-  function showQuote(index) {
-    const quote = HeroQuotes[index];
-    textEl.style.opacity = '0';
-    textEl.style.transform = 'translateY(-10px)';
-    authorEl.style.opacity = '0';
-    authorEl.style.transform = 'translateY(-10px)';
-    
-    setTimeout(() => {
-      textEl.textContent = quote.text;
-      authorEl.textContent = '—— ' + quote.author;
-      textEl.style.opacity = '1';
-      textEl.style.transform = 'translateY(0)';
-      authorEl.style.opacity = '1';
-      authorEl.style.transform = 'translateY(0)';
-    }, 300);
-  }
-
-  function nextQuote() {
-    currentQuoteIndex = (currentQuoteIndex + 1) % HeroQuotes.length;
-    showQuote(currentQuoteIndex);
+  // 清除旧计时器，防止重复
+  if (window._quoteTimer) {
+    clearInterval(window._quoteTimer);
+    window._quoteTimer = null;
   }
 
   // 初始显示
   showQuote(0);
-  
+
   // 每5秒切换
-  quoteTimer = setInterval(nextQuote, 5000);
+  window._quoteTimer = setInterval(nextQuote, 5000);
 }
+
+// 页面初始化时调用一次
+document.addEventListener('DOMContentLoaded', initHeroQuote);
 
 // ===================== 文章动态加载 =====================
 async function renderArticleCards() {
@@ -251,7 +262,6 @@ function escapeHtml(str) {
 }
 
 // ===================== 页面初始化 =====================
-document.addEventListener('DOMContentLoaded', () => {
-  initHeroQuote();
+document.addEventListener('DOMContentLoaded', function() {
   initSearch();
 });
