@@ -7,17 +7,30 @@ function parseMarkdown(md) {
 
   let html = md;
 
-  // 1. 保护代码块（防止内部被转义）
+  // 1. 保护代码块（防止内部被转义）— 兼容 ``` 后有尾随空格，带复制按钮
   const codeBlocks = [];
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
+  html = html.replace(/```(\w*)[ \t]*\n([\s\S]*?)```[ \t]*/g, (m, lang, code) => {
     const idx = codeBlocks.length;
-    codeBlocks.push(`<pre><code class="language-${lang || 'text'}">${escapeHtml(code.trimEnd())}</code></pre>`);
+    var langLabel = lang || 'text';
+    var rawCode = code.trimEnd();
+    var escaped = escapeHtml(rawCode);
+    var block = '<div class="code-block-wrapper">'
+      + '<div class="code-block-header">'
+      + '<span class="code-lang">' + escapeHtml(langLabel) + '</span>'
+      + '<button class="copy-btn" onclick="copyCode(this)" type="button">'
+      + '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM4 4H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      + '<span class="copy-text">复制</span>'
+      + '</button>'
+      + '</div>'
+      + '<pre><code class="language-' + langLabel + '">' + escaped + '</code></pre>'
+      + '</div>';
+    codeBlocks.push(block);
     return `%%CODEBLOCK_${idx}%%`;
   });
 
-  // 2. 保护行内代码
+  // 2. 保护行内代码（不跨行匹配，防止吞掉表格和段落）
   const inlineCodes = [];
-  html = html.replace(/`([^`]+)`/g, (m, code) => {
+  html = html.replace(/`([^`\n]+)`/g, (m, code) => {
     const idx = inlineCodes.length;
     inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
     return `%%INLINE_${idx}%%`;
@@ -181,6 +194,17 @@ function inlineFormat(text) {
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(m, label, href) {
     var safeHref = validateUrl(href) ? href : '#';
     return '<a href="' + safeHref + '" target="_blank" rel="noopener noreferrer" style="color:#0071e3;text-decoration:underline;">' + escapeHtml(label) + '</a>';
+  });
+  // 裸链接 https://xxx 或 http://xxx — 自动转为可点击链接
+  text = text.replace(/(^|[^="'>])(https?:\/\/[^\s<\|]+)/g, function(m, prefix, url) {
+    // 去掉末尾的标点符号（句号、逗号、括号等）
+    var trailing = '';
+    var cleanUrl = url;
+    while (cleanUrl.length > 0 && /[.,;:!?)\]]$/.test(cleanUrl)) {
+      trailing = cleanUrl.charAt(cleanUrl.length - 1) + trailing;
+      cleanUrl = cleanUrl.substring(0, cleanUrl.length - 1);
+    }
+    return prefix + '<a href="' + cleanUrl + '" target="_blank" rel="noopener noreferrer" style="color:#0071e3;text-decoration:underline;word-break:break-all;">' + escapeHtml(cleanUrl) + '</a>' + trailing;
   });
   // 加粗 **text**
   text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -484,3 +508,39 @@ var PostLoader = {
     return cleaned.slice(0, len) + (cleaned.length > len ? '...' : '');
   }
 };
+
+// ===================== 代码块复制功能 =====================
+function copyCode(btn) {
+  var wrapper = btn.closest('.code-block-wrapper');
+  if (!wrapper) return;
+  var codeEl = wrapper.querySelector('code');
+  if (!codeEl) return;
+  var text = codeEl.textContent;
+  function showSuccess() {
+    var textSpan = btn.querySelector('.copy-text');
+    var original = textSpan.textContent;
+    textSpan.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      textSpan.textContent = original;
+      btn.classList.remove('copied');
+    }, 2000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showSuccess).catch(function() {
+      _fallbackCopy(text, showSuccess);
+    });
+  } else {
+    _fallbackCopy(text, showSuccess);
+  }
+}
+
+function _fallbackCopy(text, callback) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); callback(); } catch(e) {}
+  document.body.removeChild(ta);
+}

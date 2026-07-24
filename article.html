@@ -158,7 +158,7 @@
           <span>·</span>
           <span>🏷 ${meta.tag || '未分类'}</span>
           <span>·</span>
-          <span>⏱ 约 ${meta.readtime || '5'}分钟阅读</span>`;
+          <span>⏱ 约 ${(meta.readtime || '5').toString().replace(/分钟$/, '')}分钟阅读</span>`;
         document.getElementById('articleTitle').textContent = meta.title || '未命名文章';
         document.getElementById('articleBody').innerHTML = parseMarkdown(content);
       } catch(e) {

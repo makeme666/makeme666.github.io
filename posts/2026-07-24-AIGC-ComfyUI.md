@@ -102,7 +102,7 @@ python main.py
 ### 插件安装与管理
 ### ComfyUI-Manager插件管理器
 新版 ComfyUI-Manager 以内置ComfyUI 核心手动启用
-   1. 激活虚拟环境：￼
+   1. 激活虚拟环境：
 Windows
 ```
 venv\Scripts\activate
@@ -120,7 +120,7 @@ source venv/bin/activate
 
 3. 运行 ComfyUI 时使用 --enable-manager 标志启用管理器
 ```
-￼python main.py --enable-manager
+python main.py --enable-manager
 ```
 ​
 ### easy use节点
@@ -138,7 +138,7 @@ cd ComfyUI/custom_nodes
 ```
 git clone https://github.com/rgthree/rgthree-comfy.git
 ```
-￼Restart ComfyUI
+Restart ComfyUI
 
 ### ComfyUI-Florence2插件和模型：[https://github.com/kijai/ComfyUI-Florence2](https://github.com/kijai/ComfyUI-Florence2))
 
@@ -181,7 +181,7 @@ SD3.5
 3,depth深度控制
 ## LORA
 Lora是模型微调的补丁，优化细节，加少步数，增加特效，定制风景、人物风格
-提示词助手​￼https://moonvy.com/apps/ops/
+提示词助手​https://moonvy.com/apps/ops/
 1.  使用方法：lora节点+触发词
 2.  多个lora串联使用
 3. lora manager插件
@@ -302,9 +302,9 @@ K采样器：seed随机种子，步数，CFG，采样器，调度器，降噪
 条件空间处理（选模型，文本编码）
 潜空间迭代去噪（KSample采样器，空Latent）
 像素空间转换（Vae解码）
-### 提示词推荐模板​￼(越向前权重越重)
+### 提示词推荐模板​(越向前权重越重)
 正向提示词
-高效公式：质量词+内容+风格​￼
+高效公式：质量词+内容+风格​
 质量词：masterpiece，highly detailed，Best quality​
 内容：谁在哪里做什么​
 风格：写实--photorealistic   ； 3d--3d rendering ； 卡通--Cartoon或Studio Ghibli
