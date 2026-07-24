@@ -96,6 +96,51 @@ function parseMarkdown(md) {
       continue;
     }
 
+    // 表格检测：当前行含 | 且下一行是分隔符（---）
+    if (line.indexOf('|') !== -1 && i + 1 < lines.length) {
+      var nextLine = lines[i + 1];
+      // 分隔符行：只包含 | - : 和空格，且至少有一个 -
+      if (/^\s*\|?[\s\-:|]+\|?\s*$/.test(nextLine) && nextLine.indexOf('-') !== -1) {
+        closeLists();
+        closeBlockquote();
+
+        // 解析表头单元格
+        var headers = _parseTableRow(line);
+        // 解析对齐方式
+        var aligns = _parseTableAlign(nextLine);
+
+        var tableHtml = '<div class="table-wrapper"><table><thead><tr>';
+        for (var h = 0; h < headers.length; h++) {
+          var alignAttr = aligns[h] ? ' style="text-align:' + aligns[h] + '"' : '';
+          tableHtml += '<th' + alignAttr + '>' + inlineFormat(headers[h]) + '</th>';
+        }
+        tableHtml += '</tr></thead><tbody>';
+
+        // 跳过表头行和分隔符行
+        i += 2;
+
+        // 解析数据行
+        while (i < lines.length) {
+          var rowLine = lines[i];
+          if (rowLine.trim() === '' || rowLine.indexOf('|') === -1) break;
+          var cells = _parseTableRow(rowLine);
+          tableHtml += '<tr>';
+          for (var c = 0; c < cells.length; c++) {
+            var cellAlign = aligns[c] ? ' style="text-align:' + aligns[c] + '"' : '';
+            tableHtml += '<td' + cellAlign + '>' + inlineFormat(cells[c]) + '</td>';
+          }
+          tableHtml += '</tr>';
+          i++;
+        }
+        // 回退一行（外循环会 i++）
+        i--;
+
+        tableHtml += '</tbody></table></div>';
+        result.push(tableHtml);
+        continue;
+      }
+    }
+
     // 普通段落
     closeLists();
     closeBlockquote();
@@ -154,6 +199,43 @@ function validateUrl(url) {
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ===================== 表格解析辅助函数 =====================
+
+// 解析表格行：将 "| a | b | c |" 拆分为 ["a", "b", "c"]
+function _parseTableRow(line) {
+  var trimmed = line.trim();
+  // 去掉首尾的 |
+  if (trimmed.charAt(0) === '|') trimmed = trimmed.substring(1);
+  if (trimmed.charAt(trimmed.length - 1) === '|') trimmed = trimmed.substring(0, trimmed.length - 1);
+  // 先保护转义的 \| ，按 | 分割，再恢复
+  var parts = trimmed.split('|');
+  var cells = [];
+  for (var i = 0; i < parts.length; i++) {
+    cells.push(parts[i].trim());
+  }
+  return cells;
+}
+
+// 解析分隔符行，返回对齐方式数组
+// ":---" → left, ":---:" → center, "---:" → right, "---" → null
+function _parseTableAlign(line) {
+  var cells = _parseTableRow(line);
+  var aligns = [];
+  for (var i = 0; i < cells.length; i++) {
+    var cell = cells[i].trim();
+    if (cell.indexOf(':') === 0 && cell.lastIndexOf(':') === cell.length - 1 && cell.length > 1) {
+      aligns.push('center');
+    } else if (cell.indexOf(':') === 0) {
+      aligns.push('left');
+    } else if (cell.lastIndexOf(':') === cell.length - 1 && cell.length > 0) {
+      aligns.push('right');
+    } else {
+      aligns.push(null);
+    }
+  }
+  return aligns;
 }
 
 // ===================== Frontmatter 解析 =====================

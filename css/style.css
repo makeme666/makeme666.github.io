@@ -187,6 +187,54 @@ img { max-width: 100%; height: auto; }
 .article-body ul, .article-body ol { padding-left: 24px; color: #3a3a3c; line-height: 2; margin-bottom: 18px; }
 .article-body img { max-width: 100%; border-radius: var(--radius-md); margin: 16px 0; }
 
+/* ===== Article Table Styles ===== */
+.article-body .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 24px 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+.article-body .table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 400px;
+}
+.article-body .table-wrapper thead {
+  background: linear-gradient(135deg, #f0f6ff, #e8f4fd);
+}
+.article-body .table-wrapper th {
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #1a3a5c;
+  border-bottom: 2px solid rgba(0, 113, 227, 0.15);
+  white-space: nowrap;
+  font-size: 14px;
+}
+.article-body .table-wrapper td {
+  padding: 10px 16px;
+  color: #3a3a3c;
+  border-bottom: 1px solid var(--border-color);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.article-body .table-wrapper tbody tr:nth-child(even) {
+  background: rgba(0, 113, 227, 0.02);
+}
+.article-body .table-wrapper tbody tr:hover {
+  background: rgba(0, 113, 227, 0.06);
+  transition: background 0.2s ease;
+}
+.article-body .table-wrapper tbody tr:last-child td {
+  border-bottom: none;
+}
+.article-body .table-wrapper td code {
+  font-size: 13px;
+  word-break: break-all;
+}
+
 /* ===== Reward Section ===== */
 .reward-section { background: var(--glass-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 40px; margin-top: 24px; text-align: center; }
 .reward-title { font-size: 20px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
@@ -319,6 +367,9 @@ footer { background: rgba(255, 255, 255, 0.6); backdrop-filter: saturate(180%) b
   .hero { padding: calc(var(--nav-height) + 40px) 16px 60px; }
   .quote-text { font-size: 16px; }
   .search-container { padding: 20px; }
+  .article-body .table-wrapper th { padding: 8px 12px; font-size: 13px; }
+  .article-body .table-wrapper td { padding: 8px 12px; font-size: 13px; }
+  .article-body .table-wrapper table { min-width: 320px; }
 }
 @media (max-width: 480px) {
   .navbar-nav a { padding: 6px 10px; font-size: 13px; }
