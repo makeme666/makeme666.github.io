@@ -216,6 +216,10 @@ function fetchWithTimeout(url, timeoutMs) {
 var PostLoader = {
   cache: null,
 
+  // GitHub 仓库配置（用于自动扫描 posts 目录）
+  _githubRepo: 'makeme666/makeme666.github.io',
+  _githubBranch: 'main',
+
   // 诊断日志
   _log: function() {
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -244,6 +248,33 @@ var PostLoader = {
     return base + relative;
   },
 
+  // 通过 GitHub API 自动扫描 posts 目录
+  _fetchPostsFromGithub: function() {
+    var self = this;
+    var apiUrl = 'https://api.github.com/repos/' + self._githubRepo + '/contents/posts?ref=' + self._githubBranch;
+    self._log('尝试 GitHub API 扫描:', apiUrl);
+
+    return fetchWithTimeout(apiUrl, 8000)
+      .then(function(res) {
+        if (!res.ok) throw new Error('GitHub API HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(items) {
+        if (!items || !items.length) throw new Error('GitHub API 返回空');
+        // 只保留 .md 文件，按名称降序（新文章在前）
+        var mdFiles = [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type === 'file' && items[i].name && /\.md$/i.test(items[i].name)) {
+            mdFiles.push(items[i].name);
+          }
+        }
+        mdFiles.sort(function(a, b) { return b.localeCompare(a); });
+        if (mdFiles.length === 0) throw new Error('posts 目录无 .md 文件');
+        self._log('✓ GitHub API 扫描成功:', mdFiles.length, '篇');
+        return mdFiles;
+      });
+  },
+
   loadAllPosts: function() {
     var self = this;
     if (self.cache) return Promise.resolve(self.cache);
@@ -251,7 +282,7 @@ var PostLoader = {
     var postsPath = self._resolvePath('posts/');
     self._log('文章目录:', postsPath);
 
-    // 默认文章列表（兜底）
+    // 默认文章列表（最终兜底）
     var defaultPostsList = [
       '2026-04-18-glassmorphism.md',
       '2026-04-10-why-i-write.md',
@@ -259,21 +290,24 @@ var PostLoader = {
       '2026-03-15-css-design-tokens.md'
     ];
 
-    var manifestPath = postsPath + 'manifest.json';
-    self._log('尝试加载 manifest:', manifestPath);
-
-    return fetchWithTimeout(manifestPath, 6000)
-      .then(function(res) {
-        if (!res.ok) throw new Error('manifest HTTP ' + res.status);
-        return res.text();
-      })
-      .then(function(text) {
-        var manifest = JSON.parse(text);
-        if (manifest.posts && manifest.posts.length > 0) {
-          self._log('✓ manifest 加载成功:', manifest.posts.length, '篇');
-          return manifest.posts;
-        }
-        return defaultPostsList;
+    // 加载流程：GitHub API → manifest.json → 默认列表
+    return self._fetchPostsFromGithub()
+      .catch(function(e) {
+        self._log('✗ GitHub API 失败:', e.message, '| 尝试 manifest');
+        var manifestPath = postsPath + 'manifest.json';
+        return fetchWithTimeout(manifestPath, 6000)
+          .then(function(res) {
+            if (!res.ok) throw new Error('manifest HTTP ' + res.status);
+            return res.text();
+          })
+          .then(function(text) {
+            var manifest = JSON.parse(text);
+            if (manifest.posts && manifest.posts.length > 0) {
+              self._log('✓ manifest 加载成功:', manifest.posts.length, '篇');
+              return manifest.posts;
+            }
+            throw new Error('manifest 为空');
+          });
       })
       .catch(function(e) {
         self._log('✗ manifest 失败:', e.message, '| 使用默认列表');
